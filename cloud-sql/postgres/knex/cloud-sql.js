@@ -11,25 +11,26 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
+const { getAllSecrets } = require('./secrets');
 const Knex = require('knex');
+const { logger } = require('./logging');
 
-if (!process.env.DB_USER) throw Error('DB_USER needs to be set.');
-if (!process.env.DB_PASS) throw Error('DB_PASS needs to be set.');
-if (!process.env.DB_NAME) throw Error('DB_NAME needs to be set.');
-if (!process.env.INSTANCE_CONNECTION_NAME) throw Error('connection name needs to be set.');
+// let dbUser, dbPassword, dbName, cloudSqlInstance;
 
-const connectWithTcp = (config) => {
+
+
+
+const connectWithTcp = (secrets, config) => {
   // Extract host and port from socket address
   const dbSocketAddr = process.env.DB_HOST.split(":") // e.g. '127.0.0.1:5432'
-
+  let {dbUser, dbPassword, dbName, cloudSqlInstance} = secrets;
   // Establish a connection to the database
   return Knex({
     client: 'pg',
     connection: {
-      user: process.env.DB_USER, // e.g. 'my-user'
-      password: process.env.DB_PASS, // e.g. 'my-user-password'
-      database: process.env.DB_NAME, // e.g. 'my-database'
+      user: dbUser, // e.g. 'my-user'
+      password: dbPassword, // e.g. 'my-user-password'
+      database: dbName, // e.g. 'my-database'
       host: dbSocketAddr[0], // e.g. '127.0.0.1'
       port: dbSocketAddr[1], // e.g. '5432'
     },
@@ -38,17 +39,17 @@ const connectWithTcp = (config) => {
   });
 }
 
-const connectWithUnixSockets = (config) => {
+const connectWithUnixSockets = (secrets, config) => {
   const dbSocketPath = process.env.DB_SOCKET_PATH || "/cloudsql"
-
+  let {dbUser, dbPassword, dbName, cloudSqlInstance} = secrets;
   // Establish a connection to the database
   return Knex({
     client: 'pg',
     connection: {
-      user: process.env.DB_USER, // e.g. 'my-user'
-      password: process.env.DB_PASS, // e.g. 'my-user-password'
-      database: process.env.DB_NAME, // e.g. 'my-database'
-      host: `${dbSocketPath}/${process.env.INSTANCE_CONNECTION_NAME}`,
+      user: dbUser, // e.g. 'my-user'
+      password: dbPassword, // e.g. 'my-user-password'
+      database: dbName, // e.g. 'my-database'
+      host: `${dbSocketPath}/${cloudSqlInstance}`,
     },
     // ... Specify additional properties here.
     ...config
@@ -56,7 +57,7 @@ const connectWithUnixSockets = (config) => {
 }
 
 // Initialize Knex, a Node.js SQL query builder library with built-in connection pooling.
-const connect = () => {
+const connect = (secrets) => {
   // Configure which instance and what database user to connect with.
   // Remember - storing secrets in plaintext is potentially unsafe. Consider using
   // something like https://cloud.google.com/kms/ to help keep secrets secret.
@@ -94,14 +95,17 @@ const connect = () => {
 
   let knex;
   if (process.env.DB_HOST) {
-    knex = connectWithTcp(config);
+    knex = connectWithTcp(secrets, config);
   } else {
-    knex = connectWithUnixSockets(config);
+    knex = connectWithUnixSockets(secrets, config);
   }
   return knex;
 };
 
-const knex = connect();
+let secrets = getAllSecrets();
+const knex = connect(secrets);
+// console.log(dbUser)
+// const knex = connect();
 
 /**
  * Insert a vote record into the database.

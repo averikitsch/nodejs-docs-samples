@@ -109,7 +109,6 @@ app.get('/', async (req, res) => {
 app.post('/', authenticateJWT, async (req, res) => {
   // Get decoded Id Platform user id
   const uid = req.uid;
-  logger.info('uid', uid);
   // Get the team from the request and record the time of the vote.
   const {team} = req.body;
   const timestamp = new Date();

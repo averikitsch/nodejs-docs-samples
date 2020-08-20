@@ -1,7 +1,3 @@
-const config = {
-  apiKey: "AIzaSyBvOCVNfO75zBbV0AZzcOXEmdcmMfTYZCQ",
-  authDomain: "starter-akitsch.firebaseapp.com",
-};
 firebase.initializeApp(config);
 
 // Watch for state change from sign in

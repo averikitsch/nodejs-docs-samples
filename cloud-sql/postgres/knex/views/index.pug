@@ -7,8 +7,12 @@ html(lang="en")
     link(rel="stylesheet", href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css")
     link(rel="stylesheet", href="https://fonts.googleapis.com/icon?family=Material+Icons")
     script(src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js")
-    script(src="https://www.gstatic.com/firebasejs/7.17.2/firebase.js")
-    script(src="/auth.js")
+    // Firebase App (the core Firebase SDK) is always required and must be listed first
+    script(src="https://www.gstatic.com/firebasejs/7.18.0/firebase-app.js")
+    // Add Firebase auth service
+    script(src="https://www.gstatic.com/firebasejs/7.18.0/firebase-auth.js")
+    script(src="/config.js")
+    script(src="/firebase.js")
   body
 
     nav(class="red lighten-1")
