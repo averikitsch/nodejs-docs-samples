@@ -12,39 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-'use strict';
-
-// Require process, so we can mock environment variables.
-const process = require('process');
-
-const express = require('express');
-const bodyParser = require('body-parser');
 const Knex = require('knex');
 
-const app = express();
-app.set('view engine', 'pug');
-app.enable('trust proxy');
+if (!process.env.DB_USER) throw Error('DB_USER needs to be set.');
+if (!process.env.DB_PASS) throw Error('DB_PASS needs to be set.');
+if (!process.env.DB_NAME) throw Error('DB_NAME needs to be set.');
+if (!process.env.INSTANCE_CONNECTION_NAME) throw Error('connection name needs to be set.');
 
-// Automatically parse request body as form data.
-app.use(bodyParser.urlencoded({extended: false}));
-app.use(bodyParser.json());
-
-// Set Content-Type for all responses for these routes.
-app.use((req, res, next) => {
-  res.set('Content-Type', 'text/html');
-  next();
-});
-
-// Create a Winston logger that streams to Stackdriver Logging.
-const winston = require('winston');
-const {LoggingWinston} = require('@google-cloud/logging-winston');
-const loggingWinston = new LoggingWinston();
-const logger = winston.createLogger({
-  level: 'info',
-  transports: [new winston.transports.Console(), loggingWinston],
-});
-
-// [START cloud_sql_postgres_knex_create_tcp]
 const connectWithTcp = (config) => {
   // Extract host and port from socket address
   const dbSocketAddr = process.env.DB_HOST.split(":") // e.g. '127.0.0.1:5432'
@@ -63,9 +37,7 @@ const connectWithTcp = (config) => {
     ...config
   });
 }
-// [END cloud_sql_postgres_knex_create_tcp]
 
-// [START cloud_sql_postgres_knex_create_socket]
 const connectWithUnixSockets = (config) => {
   const dbSocketPath = process.env.DB_SOCKET_PATH || "/cloudsql"
 
@@ -82,7 +54,6 @@ const connectWithUnixSockets = (config) => {
     ...config
   });
 }
-// [END cloud_sql_postgres_knex_create_socket]
 
 // Initialize Knex, a Node.js SQL query builder library with built-in connection pooling.
 const connect = () => {
@@ -101,16 +72,16 @@ const connect = () => {
   // [END cloud_sql_postgres_knex_limit]
 
   // [START cloud_sql_postgres_knex_timeout]
-  // 'acquireTimeoutMillis' is the number of milliseconds before a timeout occurs when acquiring a 
-  // connection from the pool. This is slightly different from connectionTimeout, because acquiring 
+  // 'acquireTimeoutMillis' is the number of milliseconds before a timeout occurs when acquiring a
+  // connection from the pool. This is slightly different from connectionTimeout, because acquiring
   // a pool connection does not always involve making a new connection, and may include multiple retries.
   // when making a connection
   config.pool.acquireTimeoutMillis = 60000; // 60 seconds
   // 'createTimeoutMillis` is the maximum number of milliseconds to wait trying to establish an
-  // initial connection before retrying. 
+  // initial connection before retrying.
   // After acquireTimeoutMillis has passed, a timeout exception will be thrown.
   config.createTimeoutMillis = 30000; // 30 seconds
-  // 'idleTimeoutMillis' is the number of milliseconds a connection must sit idle in the pool 
+  // 'idleTimeoutMillis' is the number of milliseconds a connection must sit idle in the pool
   // and not be checked out before it is automatically closed.
   config.idleTimeoutMillis = 600000; // 10 minutes
   // [END cloud_sql_postgres_knex_timeout]
@@ -132,7 +103,6 @@ const connect = () => {
 
 const knex = connect();
 
-// [START cloud_sql_postgres_knex_connection]
 /**
  * Insert a vote record into the database.
  *
@@ -147,7 +117,6 @@ const insertVote = async (knex, vote) => {
     throw Error(err);
   }
 };
-// [END cloud_sql_postgres_knex_connection]
 
 /**
  * Retrieve the latest 5 vote records from the database.
@@ -175,86 +144,9 @@ const getVoteCount = async (knex, candidate) => {
   return await knex('votes').count('vote_id').where('candidate', candidate);
 };
 
-app.get('/', async (req, res) => {
-  try {
-    // Query the total count of "TABS" from the database.
-    const tabsResult = await getVoteCount(knex, 'TABS');
-    const tabsTotalVotes = parseInt(tabsResult[0].count);
-    // Query the total count of "SPACES" from the database.
-    const spacesResult = await getVoteCount(knex, 'SPACES');
-    const spacesTotalVotes = parseInt(spacesResult[0].count);
-    // Query the last 5 votes from the database.
-    const votes = await getVotes(knex);
-    // Calculate and set leader values.
-    let leadTeam = '';
-    let voteDiff = 0;
-    let leaderMessage = '';
-    if (tabsTotalVotes !== spacesTotalVotes) {
-      if (tabsTotalVotes > spacesTotalVotes) {
-        leadTeam = 'TABS';
-        voteDiff = tabsTotalVotes - spacesTotalVotes;
-      } else {
-        leadTeam = 'SPACES';
-        voteDiff = spacesTotalVotes - tabsTotalVotes;
-      }
-      leaderMessage = `${leadTeam} are winning by ${voteDiff} vote${
-        voteDiff > 1 ? 's' : ''
-      }.`;
-    } else {
-      leaderMessage = 'TABS and SPACES are evenly matched!';
-    }
-    res.render('index.pug', {
-      votes: votes,
-      tabsCount: tabsTotalVotes,
-      spacesCount: spacesTotalVotes,
-      leadTeam: leadTeam,
-      voteDiff: voteDiff,
-      leaderMessage: leaderMessage,
-    });
-  }
-  catch(err) {
-    res
-      .status(500)
-      .send('Unable to load page; see logs for more details.')
-      .end();
-  }
-    
-});
-
-app.post('/', async (req, res) => {
-  // Get the team from the request and record the time of the vote.
-  const {team} = req.body;
-  const timestamp = new Date();
-
-  if (!team || (team !== 'TABS' && team !== 'SPACES')) {
-    res.status(400).send('Invalid team specified.').end();
-    return;
-  }
-
-  // Create a vote record to be stored in the database.
-  const vote = {
-    candidate: team,
-    time_cast: timestamp,
-  };
-
-  // Save the data to the database.
-  try {
-    await insertVote(knex, vote);
-  } catch (err) {
-    logger.error(`Error while attempting to submit vote:${err}`);
-    res
-      .status(500)
-      .send('Unable to cast vote; see logs for more details.')
-      .end();
-    return;
-  }
-  res.status(200).send(`Successfully voted for ${team} at ${timestamp}`).end();
-});
-
-const PORT = process.env.PORT || 8080;
-const server = app.listen(PORT, () => {
-  console.log(`App listening on port ${PORT}`);
-  console.log('Press Ctrl+C to quit.');
-});
-
-module.exports = server;
+module.exports = {
+  getVoteCount,
+  getVotes,
+  insertVote,
+  knex,
+}

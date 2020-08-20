@@ -1,0 +1,18 @@
+steps:
+# Build the container image
+- name: 'gcr.io/cloud-builders/gcloud'
+  entrypoint: '/bin/bash'
+  args:
+    - '-c'
+    - |
+      set -e
+      # gcloud services enable sqladmin.googleapis.com
+      # gcloud sql instances create test-samples \
+      # --database-version=POSTGRES_12 \
+      # --region=us-central1 \
+      # --cpu=2 \
+      # --memory=7680MB
+      gcloud sql databases create testDB --instance=test-samples
+      gcloud sql users create root --instance=test-samples \
+       --password=testPW
+      gcloud sql connect test-samples -u testPW -d testDB

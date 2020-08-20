@@ -13,13 +13,15 @@
     "node": ">=10.0.0"
   },
   "scripts": {
-    "start-proxy": "! pgrep cloud_sql_proxy > /dev/null && cloud_sql_proxy -dir=/cloudsql -instances=$CLOUD_SQL_INSTANCE_NAME &",
+    "start-proxy": "! pgrep cloud_sql_proxy > /dev/null && cloud_sql_proxy -dir=/cloudsql -instances=$INSTANCE_CONNECTION_NAME &",
+    "start": "node index.js",
     "test": "mocha test/*.test.js --timeout=60000 --exit"
   },
   "dependencies": {
     "@google-cloud/logging-winston": "^4.0.0",
     "body-parser": "^1.18.3",
     "express": "^4.16.2",
+    "firebase-admin": "^9.1.0",
     "knex": "^0.21.0",
     "pg": "^8.0.0",
     "pug": "^3.0.0",
