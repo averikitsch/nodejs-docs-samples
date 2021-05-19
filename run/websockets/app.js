@@ -15,13 +15,9 @@
 'use strict';
 const express = require('express');
 const {addUser, getUser, deleteUser} = require('./users');
-const {getRoomFromCache, addMessageToCache} = require('./storage')
 const app = express();
 app.set('view engine', 'pug');
 app.use(express.static(__dirname + '/public'));
-
-const REDISHOST = process.env.REDISHOST || 'localhost';
-const REDISPORT = process.env.REDISPORT || 6379;
 
 app.get('/', async (req, res) => {
   res.render('index');
@@ -29,9 +25,6 @@ app.get('/', async (req, res) => {
 
 const server = require('http').Server(app);
 const io = require('socket.io')(server);
-
-const redis = require("socket.io-redis");
-io.adapter(redis({ host: REDISHOST, port: REDISPORT }));
 
 io.on('connection', socket => {
   socket.on('login', async ({name, room}, callback) => {
@@ -43,9 +36,7 @@ io.on('connection', socket => {
         title: "Someone's here",
         description: `${name} just entered the room`,
       });
-
-    const messages = await getRoomFromCache(room);
-    callback(null, messages);
+    callback();
   });
 
   socket.on('sendMessage', (message, callback) => {
@@ -53,7 +44,6 @@ io.on('connection', socket => {
     if (room) {
       const msg = {user, text: message};
       io.in(room).emit('message', msg);
-      addMessageToCache(room, msg);
     }
     callback();
   });
@@ -61,7 +51,6 @@ io.on('connection', socket => {
   socket.on('disconnect', () => {
     console.log('User disconnected');
     const {user, room} = deleteUser(socket.id);
-    console.log(user)
     if (user) {
       io.in(room).emit('notification', {
         title: 'Someone just left',

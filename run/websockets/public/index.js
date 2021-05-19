@@ -18,12 +18,12 @@ $('#signin').submit(e => {
   e.preventDefault();
   const name = $('#name').val();
   const room = $('#room').val();
-  socket.emit('login', {name, room}, (error, history) => {
+  socket.emit('login', {name, room}, (error) => {
     if (error) {
       console.log(error);
     }
-    addHistory(history.messages)
     $('#signin').hide();
+    setChatroom(room)
     $('#chatroom').show();
   });
 });
@@ -50,11 +50,9 @@ socket.on('notification', (msg) => {
   log(msg.title, msg.description);
 });
 
-// Show history in chat room
-function addHistory(messages) {
-  messages.forEach(message => {
-    log(message.user, message.text)
-  })
+// Helper function to set chatroom name
+function setChatroom(room) {
+  $('#chatroom h1').append(room);
 }
 
 // Helper function to print to chatroom
