@@ -6,7 +6,6 @@ mdc.ripple.MDCRipple.attachTo(document.querySelector('.send'))
 
 // Hide Chatroom on start
 $(document).ready(function () {
-  console.log('ready!');
   $('#chatroom').hide();
 });
 

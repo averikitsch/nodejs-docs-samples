@@ -1,7 +1,7 @@
-# Node.js websockets sample for Google App Engine
+# Node.js websockets sample for Cloud Run
 
 This sample demonstrates how to use websockets on
-[Google App Engine Flexible Environment][appengine] with Node.js.
+[Cloud Run][run] with Node.js.
 
 * [Setup](#setup)
 * [Running locally](#running-locally)
@@ -12,7 +12,7 @@ This sample demonstrates how to use websockets on
 
 Before you can run or deploy the sample, you need to do the following:
 
-1.  Refer to the [appengine/README.md][readme] file for instructions on
+1.  Refer to the [run/README.md][readme] file for instructions on
     running and deploying.
 1.  Install dependencies:
 
@@ -26,17 +26,14 @@ With `npm`:
 
     npm start
 
-## Deploying to App Engine
+## Deploying to Cloud Run
 
-With `npm`:
-
-    npm run deploy
+    gcloud beta run deploy websocket --source . --allow-unauthenticated
 
 ## Running the tests
 
 See [Contributing][contributing].
 
-[appengine]: https://cloud.google.com/appengine/docs/flexible/nodejs
+[run]: https://cloud.google.com/run/docs
 [readme]: ../README.md
 [contributing]: https://github.com/GoogleCloudPlatform/nodejs-docs-samples/blob/master/CONTRIBUTING.md
-
